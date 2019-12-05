@@ -11,9 +11,6 @@ def decodeInstruction(instruction):
     for i in range(numParams(opcode)):
         modes.append(0 if i >= len(modesStr) else int(modesStr[i]))
 
-    if len(modes):
-        modes[-1] = 1
-
     return (opcode, modes)
 
 
@@ -26,32 +23,53 @@ def numParams(opcode):
         return 0
 
 
-def getParams(pc, modes):
-    global program
-
-    params = []
-    pc = pc + 1
-    for i,m in enumerate(modes):
-        params.append(program[pc+i] if m == 1 else program[program[pc+i]])
-    return params
-
-
-def execute(opcode, params):
-    global program
-
+def execute(pc, opcode, modes):
     if opcode == 1:
-        program[params[2]] = params[0] + params[1]
+        add(pc, modes)
     elif opcode == 2:
-        program[params[2]] = params[0] * params[1]
+        mult(pc, modes)
     elif opcode == 3:
-        program[params[0]] = int(input('Input: '))
+        takeInput(pc)
     elif opcode == 4:
-        print(program[params[0]])
+        output(pc, modes)
     elif opcode == 99:
-        print('EXIT')
-        exit()
+        quit()
     else:
-        print('Unknown opcode: ' + str(opcode))
+        unknown(pc, opcode, modes)
+
+
+def add(pc, modes):
+    global program
+    val1 = program[pc+1] if modes[0] else program[program[pc+1]]
+    val2 = program[pc+2] if modes[1] else program[program[pc+2]]
+    program[program[pc+3]] = val1 + val2
+
+
+def mult(pc, modes):
+    global program
+    val1 = program[pc+1] if modes[0] else program[program[pc+1]]
+    val2 = program[pc+2] if modes[1] else program[program[pc+2]]
+    program[program[pc+3]] = val1 * val2
+
+
+def takeInput(pc):
+    global program
+    program[program[pc+1]] = int(input('Input: '))
+
+
+def output(pc, modes):
+    global program
+    print(program[pc+1] if modes[0] else program[program[pc+1]])
+
+
+def quit():
+    print('EXIT')
+    exit()
+
+
+def unknow(pc, opcode, modes):
+    print('Unknown opcode (pc/opcode/modes): ' + str(pc) + ' / ' + str(opcode) + ' / ' + str(modes))
+    exit()
 
 
 global program
@@ -61,6 +79,5 @@ with open(sys.argv[1]) as f:
 pc = 0
 while pc < len(program):
     instruction = decodeInstruction(program[pc])
-    params = getParams(pc, instruction[1])
-    execute(instruction[0], params)
+    execute(pc, instruction[0], instruction[1])
     pc = pc + len(instruction[1]) + 1
