@@ -1,5 +1,6 @@
 import operator
 
+
 class Moon:
 
     def __init__(self, x, y, z):
@@ -9,6 +10,9 @@ class Moon:
 
     def pos(self):
         return self.__pos
+
+    def vel(self):
+        return self.__vel
 
     def energy(self):
         pe = abs(self.__pos[0]) + abs(self.__pos[1]) + abs(self.__pos[2])
@@ -27,3 +31,9 @@ class Moon:
 
     def move(self):
         self.__pos = tuple(map(operator.add, self.__pos, self.__vel))
+
+    def __eq__(self, other):
+        if not isinstance(other, Moon):
+            return NotImplemented
+
+        return self.pos() == other.pos() and self.vel() == other.vel()
