@@ -34,7 +34,7 @@ for line in lines:
     quantities[product[0]] = int(product[1])
     inputs[product[0]] = reactants
 
-products = [('FUEL', 1)]
+products = [('FUEL', 2074843)]
 ore_requirement = 0
 while len(products):
     product = products.pop(0)
