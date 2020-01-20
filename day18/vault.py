@@ -4,59 +4,88 @@ from copy import deepcopy
 def neighbors(tup):
     pos = tup[0]
     step = tup[1] + 1
-    return [((pos[0]+1, pos[1]), step), ((pos[0]-1, pos[1]), step),
-            ((pos[0], pos[1]+1), step), ((pos[0], pos[1]-1), step)]
+    d = tup[2]
+    return [((pos[0]+1, pos[1]), step, d), ((pos[0]-1, pos[1]), step, d),
+            ((pos[0], pos[1]+1), step, d), ((pos[0], pos[1]-1), step, d)]
 
 
-def find_keys(tup, keys):
-    queue = [tup]
-    start_step = tup[1]
+def find_paths(c, pos):
+    nk = 0
+    queue = [(pos, 0, [])]
     checked = []
-    paths = []
-    while len(queue):
-        tup = queue.pop()
-        if tup[0] not in maze or tup[0] in checked:
+    while nk < num_keys and len(queue):
+        tup = queue.pop(0)
+        pos = tup[0]
+        step = tup[1]
+        ds = tup[2]
+        if pos in checked or pos not in maze:
             continue
-        checked.append(tup[0])
-        if 0 < max_dist < tup[1] - start_step:
+        checked.append(pos)
+        if pos in points:
+            c_other = points[pos]
+            paths[c][c_other] = (step, ds)
+        elif pos in doors:
+            nd = deepcopy(ds)
+            nd.append(doors[pos])
+            nd.sort()
+            tup = (tup[0], tup[1], nd)
+        queue += neighbors(tup)
+
+
+def traverse(c, visited, dist):
+    visited = deepcopy(visited)
+    visited.append(c)
+    visited.sort()
+    out = []
+
+    if len(visited) == 27:
+        return dist
+
+    for i in range(97, 123):
+        if i in visited:
             continue
+        req = paths[c][i]
+        step = req[0]
+        ds = req[1]
+        if len([d for d in ds if d not in visited]):  # doors without keys
+            continue
+        out.append(traverse(i, visited, dist + step))
 
-        c = maze[tup[0]]
-        if c == '.' or (97 <= ord(c) <= 122):
-            queue += neighbors(tup)
-            if 97 <= ord(c) <= 122 and ord(c) not in keys:
-                new_keys = deepcopy(keys)
-                new_keys[ord(c)] = tup[1]
-                if len(new_keys.keys()) == num_keys:
-                    print(tup[1])
-                    return tup[1]
-                else:
-                    paths.append(find_keys(tup, new_keys))
-        if 65 <= ord(c) <= 90 and (ord(c)+32) in keys:
-            queue += neighbors(tup)
-
-    return min(paths)
+    return min(out)
 
 
 with open('maze.txt') as f:
     text = [[c for c in line.strip()] for line in f.readlines()]
 
 start = ()
-maze = {}
-max_dist = -1
 num_keys = 0
+maze = []
+points = {}
+doors = {}
 row = -1
 for line in text:
     row += 1
     col = -1
     for c in line:
         col += 1
-        if c == '@':
-            start = (row, col)
-            maze[(row, col)] = '.'
-        elif c != '#':
-            if 97 <= ord(c) <= 122:
-                num_keys += 1
-            maze[(row, col)] = c
+        if c == '#':
+            continue
+        maze.append((row, col))
+        n = ord(c)
+        xy = (row, col)
+        if n == 64 or 97 <= n <= 122:
+            num_keys += 1
+            points[xy] = n
+            if n == 64:
+                start = xy
+        elif 65 <= n <= 90:
+            doors[xy] = n + 32
 
-print(find_keys((start, 0), {}))
+paths = {}
+for point in points:
+    c = points[point]
+    print(c)
+    paths[c] = {}
+    find_paths(c, point)
+
+print(traverse(64, [], 0))
