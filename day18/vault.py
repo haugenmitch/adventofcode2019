@@ -19,31 +19,26 @@ def add_path(char1, char2, path):
 
 
 def find_paths(p):
-    queue = [(0, points[p], 0, [])]
+    queue = [(0, points[p], 0)]
     master_visited = {}
     while len(queue):
-        # print(len(queue))
         current = queue.pop(0)
         steps = current[0]
         position = current[1]
         ds = current[2]
-        visited = deepcopy(current[3])
 
-        if (position not in maze) or (position in visited):
-            continue
         if position not in master_visited:
             master_visited[position] = []
         skip = False
         for previous_visit in master_visited[position]:
             d = previous_visit[0]
             s = previous_visit[1]
-            if s < steps and not ds ^ (ds & d):
+            if s <= steps and not d ^ (ds & d):
                 skip = True
                 break
         if skip:
             continue
         master_visited[position].append((ds, steps))
-        visited.append(position)
 
         char = maze[position]
         if (char.islower() or char is '@') and steps > 0:
@@ -54,41 +49,19 @@ def find_paths(p):
         x = position[0]
         y = position[1]
         steps += 1
-        queue.append((steps, (x+1, y), ds, visited))
-        queue.append((steps, (x, y+1), ds, visited))
-        queue.append((steps, (x-1, y), ds, visited))
-        queue.append((steps, (x, y-1), ds, visited))
+        for i in range(4):
+            if i == 0:
+                new_pos = (x+1, y)
+            elif i == 1:
+                new_pos = (x, y+1)
+            elif i == 2:
+                new_pos = (x-1, y)
+            else:
+                new_pos = (x, y-1)
 
-
-# def solve(char, ps, ks):
-#     ps = deepcopy(ps)
-#     for key in ps:
-#         del ps[key][char]
-#
-#     if char != '@':
-#         ks += 1 << keys.index(char)
-#     out = []
-#     for key in ps[char]:
-#         min_steps = 100000
-#         for tup in ps[char][key]:
-#             ds = tup[0]
-#             steps = tup[1]
-#             if steps < min_steps and not (ds ^ (ds & ks)):
-#                 min_steps = steps
-#         if min_steps != 100000:
-#             out.append(min_steps + solve(key, ps, ks))
-#
-#     if len(out):
-#         return min(out)
-#
-#     return 0
-
-
-def key_id(ks):
-    out = 0
-    for key in ks:
-        out += 1 << keys.index(key)
-    return out
+            if new_pos not in maze:
+                continue
+            queue.append((steps, new_pos, ds))
 
 
 def solve(remaining_ks, acquired_ks, char):
@@ -115,7 +88,7 @@ def solve(remaining_ks, acquired_ks, char):
             continue
         min_steps += solve(remaining_ks ^ key, acquired_ks ^ key, new_char)
         solutions[p] = min(solutions[p], min_steps)
-    print(p)
+
     return solutions[p]
 
 
@@ -149,11 +122,8 @@ keys.sort()
 keys.pop(0)
 doors = [c.upper() for c in keys if c.isalpha()]
 
-print(points)
-
 paths = {}
 for point in points:
-    print(point)
     paths[point] = {}
     for p2 in points:
         paths[point][p2] = []
