@@ -18,8 +18,8 @@ def add_path(char1, char2, path):
     current_paths.append(path)
 
 
-def find_paths(p):
-    queue = [(0, points[p], 0)]
+def find_paths(starting_char, p):
+    queue = [(0, p, 0)]
     master_visited = {}
     while len(queue):
         current = queue.pop(0)
@@ -41,8 +41,8 @@ def find_paths(p):
         master_visited[position].append((ds, steps))
 
         char = maze[position]
-        if (char.islower() or char is '@') and steps > 0:
-            add_path(p, char, (ds, steps))
+        if char.islower() and steps > 0:
+            add_path(starting_char, char, (ds, steps))
         elif char.isupper():
             ds += 1 << doors.index(char)
 
@@ -64,43 +64,48 @@ def find_paths(p):
             queue.append((steps, new_pos, ds))
 
 
-def solve(remaining_ks, acquired_ks, char):
+def solve(remaining_ks, acquired_ks, robots):
     if remaining_ks == 0:
         return 0
-    p = (char, remaining_ks)
-    if p in solutions:
-        return solutions[p]
-    solutions[p] = math.inf
+    solution = (tuple(robots), remaining_ks)
+    if solution in solutions:
+        return solutions[solution]
+    solutions[solution] = math.inf
     for i in range(len(keys)):
         key = 1 << i
         if not key & remaining_ks:
             continue
-        new_char = keys[i]
-        possible_paths = paths[char][new_char]
+        next_key = keys[i]
         min_steps = math.inf
-        for path in possible_paths:
-            ds = path[0]
-            steps = path[1]
-            if ds ^ (acquired_ks & ds):
-                continue
-            min_steps = min(min_steps, steps)
+        robot_index = -1
+        for k, robot in enumerate(robots):
+            possible_paths = paths[robot][next_key]
+            possible_min = math.inf
+            for path in possible_paths:
+                ds = path[0]
+                steps = path[1]
+                if ds ^ (acquired_ks & ds):
+                    continue
+                possible_min = min(possible_min, steps)
+            if possible_min < min_steps:
+                min_steps = possible_min
+                robot_index = k
         if min_steps == math.inf:
             continue
-        min_steps += solve(remaining_ks ^ key, acquired_ks ^ key, new_char)
-        solutions[p] = min(solutions[p], min_steps)
+        new_robots = deepcopy(robots)
+        new_robots[robot_index] = next_key
+        min_steps += solve(remaining_ks ^ key, acquired_ks ^ key, new_robots)
+        solutions[solution] = min(solutions[solution], min_steps)
 
-    return solutions[p]
+    return solutions[solution]
 
 
 with open(sys.argv[1]) as f:
     text = [[c for c in line.strip()] for line in f.readlines()]
 
-start = ()
-num_keys = 0
+starts = []
 maze = {}
 points = {}
-doors = []
-keys = []
 row = -1
 for line in text:
     row += 1
@@ -112,22 +117,37 @@ for line in text:
         maze[(row, col)] = c
         pos = (row, col)
         if c == '@':
-            start = pos
-            points[c] = pos
+            starts.append(pos)
         elif c.islower():
             points[c] = pos
 
 keys = list(points.keys())
 keys.sort()
-keys.pop(0)
-doors = [c.upper() for c in keys if c.isalpha()]
+doors = [c.upper() for c in keys]
 
 paths = {}
+for n, start in enumerate(starts):
+    paths[n] = {}
+    for point in points:
+        paths[n][point] = []
+    find_paths(n, start)
+
 for point in points:
     paths[point] = {}
-    for p2 in points:
-        paths[point][p2] = []
-    find_paths(point)
+    for other_point in points:
+        paths[point][other_point] = []
+    find_paths(point, points[point])
+
+# paths = {'@': {}}
+# for point in points:
+#     paths['@'][point] = []
+# find_paths('@', starts[0])
+#
+# for point in points:
+#     paths[point] = {}
+#     for p2 in points:
+#         paths[point][p2] = []
+#     find_paths(point, points[point])
 
 solutions = {}
-print(solve((1 << len(keys))-1, 0, '@'))
+print(solve((1 << len(keys))-1, 0, list(range(len(starts)))))
