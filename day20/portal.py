@@ -25,15 +25,20 @@ def find_portals():
             else:
                 portal_name += portal_labels[pos2]
             break
+
+        if portal_name == 'AA' or portal_name == 'ZZ':
+            pass
+        elif min(pos1[0], pos2[0]) == 0 or max(pos1[0], pos2[0]) == max_row \
+                or min(pos1[1], pos2[1]) == 0 or max(pos1[1], pos2[1]) == max_col:
+            portal_name += 'O'
+        else:
+            portal_name += 'I'
+
         del portal_labels[pos1]
         del portal_labels[pos2]
 
-        if portal_name not in portal_to_locs:
-            portal_to_locs[portal_name] = []
-
         for other_pos in (get_neighbors(pos1) + get_neighbors(pos2)):
             if other_pos in maze:
-                portal_to_locs[portal_name].append(other_pos)
                 locs_to_portals[other_pos] = portal_name
                 break
 
@@ -41,8 +46,9 @@ def find_portals():
 def find_connections():
     for portal_pos in locs_to_portals:
         portal_name = locs_to_portals[portal_pos]
-        if portal_name not in portal_connections:
-            portal_connections[portal_name] = {}
+        portal_connections[portal_name] = {}
+        if portal_name == 'ZZ':
+            continue
         queue = [(portal_pos, 0)]
         visited = []
         while len(queue):
@@ -51,7 +57,8 @@ def find_connections():
 
             if pos in locs_to_portals:
                 other_portal_name = locs_to_portals[pos]
-                portal_connections[portal_name][other_portal_name] = steps
+                if portal_name != other_portal_name and other_portal_name != 'AA':
+                    portal_connections[portal_name][other_portal_name] = steps
 
             for next_pos in get_neighbors(pos):
                 if next_pos not in maze or next_pos in visited:
@@ -60,21 +67,25 @@ def find_connections():
 
 
 def solve(portal_name, visited):
-    visited.append(portal_name)
+    visited.append(portal_name[0:2])
     out = [math.inf]
     for name in portal_connections[portal_name]:
         steps = portal_connections[portal_name][name]
         if name == 'ZZ':
             out.append(steps)
             continue
-        if name in visited:
+        name = name[0:2] + ('I' if name[2] == 'O' else 'O')
+        if name[0:2] in visited:
             continue
         out.append(1 + steps + solve(name, deepcopy(visited)))
     return min(out)
 
 
 with open(sys.argv[1]) as f:
-    text = [[c for c in line.rstrip()] for line in f.readlines()]
+    text = [[c for c in line] for line in f.readlines()]
+
+max_row = len(text) - 1
+max_col = max([len(line) for line in text]) - 2
 
 maze = {}
 portal_labels = {}
@@ -89,12 +100,10 @@ for line in text:
         col += 1
     row += 1
 
-portal_to_locs = {}
 locs_to_portals = {}
 find_portals()
 
 portal_connections = {}
 find_connections()
 
-print(portal_connections)
 print(solve('AA', []))
