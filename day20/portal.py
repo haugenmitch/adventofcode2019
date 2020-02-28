@@ -66,18 +66,28 @@ def find_connections():
                 queue.append((next_pos, steps + 1))
 
 
-def solve(portal_name, visited):
-    visited.append(portal_name[0:2])
+def solve(portal_name, level, visited):
     out = [math.inf]
     for name in portal_connections[portal_name]:
         steps = portal_connections[portal_name][name]
         if name == 'ZZ':
-            out.append(steps)
+            if level == 0:
+                out.append(steps)
             continue
-        name = name[0:2] + ('I' if name[2] == 'O' else 'O')
-        if name[0:2] in visited:
+
+        if name[2] == 'O' and level == 0:
             continue
-        out.append(1 + steps + solve(name, deepcopy(visited)))
+
+        fingerprint = (portal_name, name, level)
+        if fingerprint in visited:
+            continue
+        visited.append(fingerprint)
+        is_inner = name[2] == 'I'
+        new_level = level + (1 if is_inner else -1)
+        if level > 25:  # don't let it recurse too deep (kinda inelegant)
+            continue
+        name = name[0:2] + ('O' if is_inner else 'I')
+        out.append(1 + steps + solve(name, new_level, deepcopy(visited)))
     return min(out)
 
 
@@ -106,4 +116,4 @@ find_portals()
 portal_connections = {}
 find_connections()
 
-print(solve('AA', []))
+print(solve('AA', 0, []))
